@@ -1,0 +1,168 @@
+---
+title: "Wildflower Experiment"
+author: "Joanna Tang"
+date: "12/20/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# CCBER Wildflower Experiment
+
+```{r include = FALSE}
+
+library(janitor)
+library(lubridate)
+library(rstatix)
+library(FSA)
+library(plotrix)
+library(tidyverse)
+
+
+wildflower <- read_csv("wildflower_data.csv") %>% clean_names()
+
+```
+
+## Seed Scarification Treatments
+H1: Seed scarification treatment has an effect on the number of seedlings germinated.
+Results: No significant difference in the number of seedlings germinated.  H1 not supported.
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+
+# Seeding Treatments
+
+## Dataframe of LuBi, SiBe, LuSu
+treated_species_df <- wildflower %>% 
+  filter(species == "LuSu" | species == "SiBe" | species == "LuBi")
+
+## Exploratory graphs
+treated_hist <- treated_species_df %>% 
+  ggplot() +
+  geom_histogram(aes(x = number_of_seedlings))
+#skewed right
+treated_qq <- treated_species_df %>% 
+  ggplot() +
+  geom_qq(aes(sample = number_of_seedlings))
+#skewed right
+
+
+## Boxplots of seedlings per plot, by treatment, by species
+treatment_box <- treated_species_df %>% 
+  ggplot(aes(x = treated_untreated, y = number_of_seedlings)) +
+  geom_boxplot() +
+  geom_jitter(alpha = .4) +
+  facet_wrap(~species) +
+  labs(title = "Total number of germinated seedlings per plot, by scarification treatment", x = "Seed Treatment", y = "Seedlings (#)", caption = "Graph shows boxplots of total number of germinated seedlings in each plot.  \n No significant difference in scarification treatment on seedling germination exhibited in any of the species.") +
+  theme_classic() +
+  scale_y_continuous(expand = c(0,0), limits = c(0, 15)) +
+  scale_x_discrete(labels = c("Scarification", "None"))
+treatment_box
+
+# Wilcoxon, for LuBi
+lubi_untreated <- treated_species_df %>% 
+  filter(species == "LuBi") %>% 
+  filter(treated_untreated == "Untreated")
+lubi_treated <- treated_species_df %>% 
+  filter(species == "LuBi") %>% 
+  filter(treated_untreated == "Treated")
+lubi_treated_wilcox <- wilcox.test(lubi_treated$number_of_seedlings, lubi_untreated$number_of_seedlings)
+#p = .715, W = 55
+
+# Wilcoxon, for LuSu
+lusu_untreated <- treated_species_df %>% 
+  filter(species == "LuSu") %>% 
+  filter(treated_untreated == "Untreated")
+lusu_treated <- treated_species_df %>% 
+  filter(species == "LuSu") %>% 
+  filter(treated_untreated == "Treated")
+lusu_treated_wilcox <- wilcox.test(lusu_treated$number_of_seedlings, lusu_untreated$number_of_seedlings)
+#p = .1096, W = 71.5
+
+```
+
+## Caging Treatments
+H2: Caging treatment has an effect on the number of seedlings germinated.
+Results: Caging treatment only favored seedling germination of Lupinus succulentus.  H2 partially supported.
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+
+# Caging Treatments
+
+## Exploratory graphs
+caging_hist <- wildflower %>% 
+  ggplot() +
+  geom_histogram(aes(x = number_of_seedlings))
+#skewed right
+caging_qq <- wildflower %>% 
+  ggplot() +
+  geom_qq(aes(sample = number_of_seedlings))
+#skewed right
+
+
+## Boxplots of seedlings per plot, by caging treatment, by species
+caging_box <- wildflower %>% 
+  filter(species != "NA") %>% 
+  filter(species != "AnNu") %>% 
+  filter(species != "SiBe") %>%
+  filter(species != "CaMe") %>% 
+  filter(species != "AcSt") %>% 
+  ggplot(aes(x = caged_uncaged, y = number_of_seedlings)) +
+  geom_boxplot(aes(fill = caged_uncaged), show.legend = FALSE) +
+  geom_jitter(alpha = .4) +
+  facet_wrap(~species) +
+  labs(title = "Total number of germinated seedlings per plot, by caging treatment", x = "Caging Treatment", y = "Seedlings (#)", caption = "Graph shows boxplots of total number of germinated seedlings in each plot.  \n Caged plots favored Lupinus succulentus seedling germination (W = 84, p = 0.01).") +
+  theme_classic()
+caging_box
+
+# Wilcoxon, for AcSt
+acst_caged <- wildflower %>% 
+  filter(species == "AcSt") %>% 
+  filter(caged_uncaged == "Caged")
+acst_uncaged <- wildflower %>% 
+  filter(species == "AcSt") %>% 
+  filter(caged_uncaged == "Uncaged")
+acst_wilcox <- wilcox.test(acst_caged$number_of_seedlings, acst_uncaged$number_of_seedlings)
+#p = .1983, W = 32.5
+
+# Wilcoxon, for CaDe
+cade_caged <- wildflower %>% 
+  filter(species == "CaDe") %>% 
+  filter(caged_uncaged == "Caged")
+cade_uncaged <- wildflower %>% 
+  filter(species == "CaDe") %>% 
+  filter(caged_uncaged == "Uncaged")
+cade_wilcox <- wilcox.test(cade_caged$number_of_seedlings, cade_uncaged$number_of_seedlings)
+#p = .333, W = 37
+
+# Wilcoxon, for LuBi
+lubi_caged <- wildflower %>% 
+  filter(species == "LuBi") %>% 
+  filter(caged_uncaged == "Caged")
+lubi_uncaged <- wildflower %>% 
+  filter(species == "LuBi") %>% 
+  filter(caged_uncaged == "Uncaged")
+lubi_wilcox <- wilcox.test(lubi_caged$number_of_seedlings, lubi_uncaged$number_of_seedlings)
+#p = .715, W = 45
+
+# Wilcoxon, for LuSu
+lusu_caged <- wildflower %>% 
+  filter(species == "LuSu") %>% 
+  filter(caged_uncaged == "Caged")
+lusu_uncaged <- wildflower %>% 
+  filter(species == "LuSu") %>% 
+  filter(caged_uncaged == "Uncaged")
+lusu_wilcox <- wilcox.test(lusu_caged$number_of_seedlings, lusu_uncaged$number_of_seedlings)
+#p = .009221, W = 84
+
+# Wilcoxon, for NuTe
+nute_caged <- wildflower %>% 
+  filter(species == "NuTe") %>% 
+  filter(caged_uncaged == "Caged")
+nute_uncaged <- wildflower %>% 
+  filter(species == "NuTe") %>% 
+  filter(caged_uncaged == "Uncaged")
+nute_wilcox <- wilcox.test(nute_caged$number_of_seedlings, nute_uncaged$number_of_seedlings)
+#p = .6473, W = 56
+
+```
+
